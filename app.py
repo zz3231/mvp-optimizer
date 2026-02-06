@@ -17,6 +17,27 @@ from utils import (format_portfolio_results, create_correlation_matrix_template,
                    validate_inputs, validate_correlation_matrix)
 
 
+def calculate_implied_risk_aversion(optimal_portfolio, tangency_portfolio, risk_free_rate):
+    """
+    Calculate implied risk aversion from optimal portfolio weights
+    
+    Formula: A = (r_tangency - r_f) / (w_tangency * σ_tangency²)
+    """
+    try:
+        w_tangency = optimal_portfolio.get('weight_tangency', 0)
+        if w_tangency <= 0:
+            return None
+            
+        r_tangency = tangency_portfolio['expected_return']
+        sigma_tangency = tangency_portfolio['volatility']
+        
+        # A = (r_tangency - r_f) / (w_tangency * σ²)
+        implied_a = (r_tangency - risk_free_rate) / (w_tangency * sigma_tangency ** 2)
+        return implied_a
+    except:
+        return None
+
+
 # Page configuration
 st.set_page_config(
     page_title="Mean-Variance Portfolio Optimizer",
@@ -76,27 +97,19 @@ risk_aversion = st.sidebar.number_input(
     max_value=10.0,
     value=3.0,
     step=0.01,
-    format="%.2f"
+    format="%.2f",
+    disabled=st.session_state.get('use_target_return_mode', False)
 )
 
 # Use risk-free asset
 use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
-
-if use_riskless:
-    # Limited borrowing option
-    limited_borrowing = st.sidebar.checkbox(
-        "Limited Borrowing", 
-        value=False,
-        help="If checked, cannot borrow (w_rf >= 0). If unchecked, can borrow to leverage."
-    )
-else:
-    limited_borrowing = False
 
 # Use constraints
 use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
 
 # Use target return
 use_target_return = st.sidebar.checkbox("Use Target Return", value=False)
+st.session_state['use_target_return_mode'] = use_target_return
 
 if use_target_return:
     target_return = st.sidebar.number_input(
@@ -357,7 +370,7 @@ with tab1:
                         # Use target return mode
                         if use_riskless and tangency:
                             optimal = optimizer.find_target_return_portfolio_with_riskfree(
-                                tangency, target_return, limited_borrowing
+                                tangency, target_return
                             )
                         else:
                             optimal = optimizer.find_target_return_portfolio_without_riskfree(
@@ -367,7 +380,7 @@ with tab1:
                         # Use risk aversion mode
                         if use_riskless and tangency:
                             optimal = optimizer.find_optimal_portfolio_with_riskfree(
-                                tangency, risk_aversion, limited_borrowing
+                                tangency, risk_aversion
                             )
                         else:
                             optimal = optimizer.find_optimal_portfolio_without_riskfree(
@@ -424,8 +437,6 @@ with tab1:
             
             with col2:
                 st.subheader("Optimal Portfolio")
-                if use_target_return:
-                    st.caption(f"Target Return: {target_return:.2%}")
                 if portfolios['optimal']:
                     result = format_portfolio_results(portfolios['optimal'], "Optimal")
                     st.dataframe(result['weights_df'], hide_index=True)
@@ -434,6 +445,11 @@ with tab1:
                     if result['additional_info']:
                         for key, value in result['additional_info'].items():
                             st.metric(key, value)
+                    # Show implied risk aversion if using risk-free asset
+                    if use_riskless and 'weight_tangency' in portfolios['optimal']:
+                        implied_a = calculate_implied_risk_aversion(portfolios['optimal'], tangency, risk_free_rate)
+                        if implied_a:
+                            st.metric("Implied Risk Aversion", f"{implied_a:.2f}")
                 else:
                     st.warning("Optimal portfolio not found")
             
@@ -453,8 +469,6 @@ with tab1:
             
             with col1:
                 st.subheader("Optimal Portfolio")
-                if use_target_return:
-                    st.caption(f"Target Return: {target_return:.2%}")
                 if portfolios['optimal']:
                     result = format_portfolio_results(portfolios['optimal'], "Optimal")
                     st.dataframe(result['weights_df'], hide_index=True)
