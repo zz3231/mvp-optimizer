@@ -93,7 +93,7 @@ st.sidebar.info(
 )
 
 # Main tabs
-tab1, tab2, tab3 = st.tabs(["📊 Portfolio Optimization", "📈 Sensitivity Analysis", "ℹ️ Instructions"])
+tab1, tab2, tab3 = st.tabs(["Portfolio Optimization", "Sensitivity Analysis", "Instructions"])
 
 with tab1:
     st.header("Portfolio Input")
