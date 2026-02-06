@@ -59,9 +59,15 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
         tang_vol = portfolios['tangency']['volatility']
         sharpe = (tang_return - rf_rate) / tang_vol
         
-        # Extend CAL line
-        max_vol = max(frontier['volatilities']) * 1.2
-        cal_vols = np.linspace(0, max_vol, 100)
+        # Extend CAL to cover optimal portfolio and beyond
+        max_vol_for_cal = tang_vol * 1.2  # Default extension
+        
+        # If optimal exists and is far from tangency, extend CAL to it
+        if portfolios['optimal']:
+            opt_vol = portfolios['optimal']['volatility']
+            max_vol_for_cal = max(max_vol_for_cal, opt_vol * 1.05)
+        
+        cal_vols = np.linspace(0, max_vol_for_cal, 100)
         cal_returns = rf_rate + sharpe * cal_vols
         
         ax.plot(cal_vols, cal_returns, 'r--', linewidth=2,

@@ -229,9 +229,15 @@ class MeanVarianceOptimizer:
             'success': True
         }
     
-    def compute_efficient_frontier(self, n_points=100, constraints=None):
+    def compute_efficient_frontier(self, n_points=100, constraints=None, extend_to_return=None):
         """
         Compute efficient frontier with smart range selection
+        
+        Parameters:
+        -----------
+        extend_to_return : float, optional
+            If provided, extend frontier to at least this return level
+            (useful when optimal portfolio has high leverage)
         
         Strategy: Find min/max returns that are actually achievable,
         then extend slightly for visual completeness
@@ -241,16 +247,18 @@ class MeanVarianceOptimizer:
         asset_max_return = np.max(self.expected_returns)
         
         # Calculate approximate GMV return (lower bound)
-        # GMV typically has return between min and mean
         gmv_approx_return = asset_min_return * 0.9
         
         # Calculate approximate tangency return (upper bound)
-        # Tangency typically near or above max asset return
         tangency_approx_return = asset_max_return * 1.1
         
         # Set target range: from below GMV to above tangency
         min_return = gmv_approx_return * 0.95
         max_return = tangency_approx_return * 1.05
+        
+        # If extend_to_return is specified and higher, extend frontier
+        if extend_to_return is not None:
+            max_return = max(max_return, extend_to_return * 1.05)
         
         target_returns = np.linspace(min_return, max_return, n_points)
         

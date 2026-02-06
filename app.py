@@ -337,8 +337,13 @@ with tab1:
                     st.session_state.portfolios = portfolios
                     st.session_state.optimal = optimal
                     
-                    # Compute efficient frontier
-                    frontier = optimizer.compute_efficient_frontier(n_points=50, constraints=constraints)
+                    # Compute efficient frontier, extending to optimal if needed
+                    extend_to = optimal['expected_return'] if optimal else None
+                    frontier = optimizer.compute_efficient_frontier(
+                        n_points=50, 
+                        constraints=constraints,
+                        extend_to_return=extend_to
+                    )
                     st.session_state.frontier = frontier
                     
                     st.success("Optimization completed successfully!")
