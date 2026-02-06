@@ -21,38 +21,35 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
     n_assets = len(optimizer.asset_names)
     colors = cm.get_cmap('tab10')(np.linspace(0, 1, n_assets))
     
-    # Plot individual assets with different colors
+    # Plot individual assets with different colors (no legend)
     for i, name in enumerate(optimizer.asset_names):
         asset_return = optimizer.expected_returns[i]
         asset_vol = optimizer.volatilities[i]
         ax.scatter(asset_vol, asset_return, s=150, c=[colors[i]], 
                   alpha=0.8, edgecolors='black', linewidth=1.5, 
-                  zorder=5, label=name)
+                  zorder=5)  # No label for legend
+        # Simple text annotation without background box
         ax.annotate(name, (asset_vol, asset_return), 
                    xytext=(8, 8), textcoords='offset points',
-                   fontsize=10, fontweight='bold',
-                   bbox=dict(boxstyle='round,pad=0.3', facecolor=colors[i], 
-                            alpha=0.3, edgecolor='none'))
+                   fontsize=10, fontweight='bold')
     
-    # Plot special portfolios with consistent sizes
-    marker_size = 200
-    
+    # Plot special portfolios with larger sizes
     if portfolios['tangency']:
         tang = portfolios['tangency']
         ax.scatter(tang['volatility'], tang['expected_return'], 
-                  s=marker_size, c='purple', marker='D', label='Tangency',
+                  s=220, c='purple', marker='D', label='Tangency',
                   edgecolors='black', linewidth=2, zorder=7, alpha=0.9)
     
     if portfolios['optimal']:
         opt = portfolios['optimal']
         ax.scatter(opt['volatility'], opt['expected_return'],
-                  s=marker_size, c='red', marker='*', label='Optimal',
+                  s=300, c='red', marker='*', label='Optimal',
                   edgecolors='black', linewidth=2, zorder=7, alpha=0.9)
     
     if portfolios['gmv']:
         gmv = portfolios['gmv']
         ax.scatter(gmv['volatility'], gmv['expected_return'],
-                  s=marker_size, c='orange', marker='s', label='GMV',
+                  s=220, c='orange', marker='s', label='GMV',
                   edgecolors='black', linewidth=2, zorder=7, alpha=0.9)
     
     # Plot CAL if risk-free asset is used
