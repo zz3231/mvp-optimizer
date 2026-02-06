@@ -208,7 +208,7 @@ with tab1:
                     default_corr[i, j] = default_corr[j, i] = 0.3
         st.session_state[corr_key] = default_corr.tolist()
     
-    # Build correlation matrix
+    # Build correlation matrix - read upper triangle, auto-update lower
     correlation_matrix = []
     
     for i in range(n_assets):
@@ -229,38 +229,38 @@ with tab1:
                     row.append(1.0)
                 elif i < j:
                     # Upper triangle - editable
-                    default_val = st.session_state[corr_key][i][j] if i < len(st.session_state[corr_key]) and j < len(st.session_state[corr_key][i]) else 0.3
+                    input_key = f"corr_input_{i}_{j}"
                     val = st.number_input(
                         f"{asset_names[i] if i < len(asset_names) else f'Asset {i+1}'} × "
                         f"{asset_names[j] if j < len(asset_names) else f'Asset {j+1}'}",
                         min_value=-0.99,
                         max_value=0.99,
-                        value=float(default_val),
+                        value=float(st.session_state[corr_key][i][j]),
                         step=0.01,
                         format="%.2f",
-                        key=f"corr_upper_{i}_{j}",
+                        key=input_key,
                         label_visibility="collapsed"
                     )
+                    # Update both positions in session state
+                    st.session_state[corr_key][i][j] = val
+                    st.session_state[corr_key][j][i] = val
                     row.append(val)
-                    # Update session state
-                    if i < len(st.session_state[corr_key]) and j < len(st.session_state[corr_key][i]):
-                        st.session_state[corr_key][i][j] = val
-                        st.session_state[corr_key][j][i] = val
                 else:
-                    # Lower triangle - mirror from upper
-                    mirror_val = st.session_state[corr_key][j][i] if j < len(st.session_state[corr_key]) and i < len(st.session_state[corr_key][j]) else 0.3
+                    # Lower triangle - read from session state (already updated)
+                    val = float(st.session_state[corr_key][i][j])
                     st.number_input(
                         f"{asset_names[i] if i < len(asset_names) else f'Asset {i+1}'} × "
                         f"{asset_names[j] if j < len(asset_names) else f'Asset {j+1}'}",
-                        value=float(mirror_val),
+                        value=val,
                         disabled=True,
-                        key=f"corr_lower_{i}_{j}",
+                        key=f"corr_display_{i}_{j}",
                         label_visibility="collapsed",
                         format="%.2f"
                     )
-                    row.append(mirror_val)
+                    row.append(val)
         correlation_matrix.append(row)
     
+    # Convert to numpy array
     correlation_matrix = np.array(correlation_matrix)
     
     st.markdown("---")
@@ -485,9 +485,9 @@ with tab2:
             # Plots
             st.subheader("Impact of Parameter Errors on Fixed Portfolio")
             st.markdown(
-                "**Key insight**: These charts show what happens to your portfolio's "
-                "performance if market parameters differ from your estimates, **but you're "
-                "stuck with weights optimized using the wrong estimates**."
+                "**Key insight**: Using fixed optimal weights, if market parameters differ "
+                "from estimates, portfolio performance changes. Expected return errors only "
+                "affect portfolio return; volatility errors only affect portfolio volatility."
             )
             
             fig = plot_sensitivity_analysis(
@@ -499,17 +499,21 @@ with tab2:
             
             # Data tables
             st.markdown("---")
-            st.subheader("Detailed Results")
+            st.subheader("Detailed Impact Data")
             
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("**Expected Return Sensitivity**")
-                st.dataframe(st.session_state.df_return_sens, hide_index=True)
+                st.markdown("**Expected Return Error → Portfolio Return Impact**")
+                # Only show relevant columns
+                df_display = st.session_state.df_return_sens[['asset', 'direction', 'return_impact']].copy()
+                st.dataframe(df_display, hide_index=True)
             
             with col2:
-                st.markdown("**Volatility Sensitivity**")
-                st.dataframe(st.session_state.df_vol_sens, hide_index=True)
+                st.markdown("**Volatility Error → Portfolio Volatility Impact**")
+                # Only show relevant columns
+                df_display = st.session_state.df_vol_sens[['asset', 'direction', 'volatility_impact']].copy()
+                st.dataframe(df_display, hide_index=True)
 
 with tab3:
     st.header("Instructions")
