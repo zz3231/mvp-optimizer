@@ -45,8 +45,7 @@ def format_portfolio_results(portfolio_dict, portfolio_name):
         additional_info['Weight on Risk-Free'] = f"{portfolio_dict['weight_riskfree']:.2%}"
         additional_info['Weight on Tangency'] = f"{portfolio_dict['weight_tangency']:.2%}"
     
-    if 'utility' in portfolio_dict:
-        metrics['Utility'] = f"{portfolio_dict['utility']:.4f}"
+    # Note: Utility is not displayed to users (internal optimization metric only)
     
     return {
         'name': portfolio_name,
