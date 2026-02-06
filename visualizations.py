@@ -77,9 +77,10 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
     
     # Set smart axis limits
     # Collect all relevant points
-    all_vols = list(optimizer.volatilities) + list(frontier['volatilities'])
-    all_returns = list(optimizer.expected_returns) + list(frontier['returns'])
+    all_vols = list(optimizer.volatilities)
+    all_returns = list(optimizer.expected_returns)
     
+    # Always include portfolios (these are the most important)
     if portfolios['tangency']:
         all_vols.append(portfolios['tangency']['volatility'])
         all_returns.append(portfolios['tangency']['expected_return'])
@@ -95,12 +96,13 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
         all_vols.append(0.0)
         all_returns.append(optimizer.risk_free_rate)
     
-    # Calculate ranges
+    # Calculate ranges based on portfolios and assets (NOT frontier)
+    # Frontier should fit within the view, not define it
     vol_max = max(all_vols)
     ret_min, ret_max = min(all_returns), max(all_returns)
     ret_range = ret_max - ret_min
     
-    # X-axis: Always start from 0 (to show risk-free), extend 10% beyond max
+    # X-axis: Always start from 0, extend 10% beyond the farthest portfolio/asset
     ax.set_xlim(0, vol_max * 1.10)
     
     # Y-axis: Add 10% margin on both sides
