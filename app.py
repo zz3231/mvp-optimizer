@@ -206,62 +206,70 @@ with tab1:
             for i in range(n_assets):
                 for j in range(i+1, n_assets):
                     default_corr[i, j] = default_corr[j, i] = 0.3
-        st.session_state[corr_key] = default_corr.tolist()
+        st.session_state[corr_key] = default_corr
     
-    # Build correlation matrix - read upper triangle, auto-update lower
-    correlation_matrix = []
-    
+    # First pass: read all upper triangle values and update session state
     for i in range(n_assets):
-        row = []
-        cols = st.columns(n_assets)
+        for j in range(i+1, n_assets):
+            input_key = f"corr_input_{i}_{j}"
+            if input_key in st.session_state:
+                val = st.session_state[input_key]
+                st.session_state[corr_key][i, j] = val
+                st.session_state[corr_key][j, i] = val
+    
+    # Display correlation matrix with headers
+    # Create header row
+    header_cols = st.columns([1.5] + [1] * n_assets)
+    with header_cols[0]:
+        st.markdown("**Asset**")
+    for j, col in enumerate(header_cols[1:]):
+        with col:
+            st.markdown(f"**{asset_names[j]}**")
+    
+    # Display matrix rows
+    for i in range(n_assets):
+        cols = st.columns([1.5] + [1] * n_assets)
+        
+        # Row header
+        with cols[0]:
+            st.markdown(f"**{asset_names[i]}**")
+        
+        # Matrix elements
         for j in range(n_assets):
-            with cols[j]:
+            with cols[j + 1]:
                 if i == j:
                     # Diagonal is always 1
                     st.number_input(
-                        f"{asset_names[i] if i < len(asset_names) else f'Asset {i+1}'} × "
-                        f"{asset_names[j] if j < len(asset_names) else f'Asset {j+1}'}",
+                        f"corr_{i}_{j}",
                         value=1.0,
                         disabled=True,
                         key=f"corr_diag_{i}_{j}",
                         label_visibility="collapsed"
                     )
-                    row.append(1.0)
                 elif i < j:
                     # Upper triangle - editable
-                    input_key = f"corr_input_{i}_{j}"
-                    val = st.number_input(
-                        f"{asset_names[i] if i < len(asset_names) else f'Asset {i+1}'} × "
-                        f"{asset_names[j] if j < len(asset_names) else f'Asset {j+1}'}",
+                    st.number_input(
+                        f"corr_{i}_{j}",
                         min_value=-0.99,
                         max_value=0.99,
-                        value=float(st.session_state[corr_key][i][j]),
+                        value=float(st.session_state[corr_key][i, j]),
                         step=0.01,
                         format="%.2f",
-                        key=input_key,
+                        key=f"corr_input_{i}_{j}",
                         label_visibility="collapsed"
                     )
-                    # Update both positions in session state
-                    st.session_state[corr_key][i][j] = val
-                    st.session_state[corr_key][j][i] = val
-                    row.append(val)
                 else:
-                    # Lower triangle - read from session state (already updated)
-                    val = float(st.session_state[corr_key][i][j])
-                    st.number_input(
-                        f"{asset_names[i] if i < len(asset_names) else f'Asset {i+1}'} × "
-                        f"{asset_names[j] if j < len(asset_names) else f'Asset {j+1}'}",
-                        value=val,
+                    # Lower triangle - mirror (use text_input for better display)
+                    st.text_input(
+                        f"corr_{i}_{j}",
+                        value=f"{st.session_state[corr_key][i, j]:.2f}",
                         disabled=True,
-                        key=f"corr_display_{i}_{j}",
-                        label_visibility="collapsed",
-                        format="%.2f"
+                        key=f"corr_mirror_{i}_{j}",
+                        label_visibility="collapsed"
                     )
-                    row.append(val)
-        correlation_matrix.append(row)
     
-    # Convert to numpy array
-    correlation_matrix = np.array(correlation_matrix)
+    # Build final correlation matrix from session state
+    correlation_matrix = np.array(st.session_state[corr_key])
     
     st.markdown("---")
     

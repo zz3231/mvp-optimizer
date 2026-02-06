@@ -229,11 +229,11 @@ class MeanVarianceOptimizer:
             'success': True
         }
     
-    def compute_efficient_frontier(self, n_points=50, constraints=None):
+    def compute_efficient_frontier(self, n_points=100, constraints=None):
         """Compute efficient frontier"""
-        # Extend range significantly beyond min/max asset returns
-        min_return = np.min(self.expected_returns) * 0.5
-        max_return = np.max(self.expected_returns) * 1.5
+        # Extend range very widely to ensure complete coverage
+        min_return = np.min(self.expected_returns) * 0.3
+        max_return = np.max(self.expected_returns) * 2.0
         target_returns = np.linspace(min_return, max_return, n_points)
         
         frontier_volatility = []

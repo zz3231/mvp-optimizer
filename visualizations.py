@@ -16,34 +16,34 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
     ax.plot(frontier['volatilities'], frontier['returns'], 
             'b-', linewidth=2, label='Efficient Frontier')
     
-    # Plot individual assets
+    # Plot individual assets (smaller markers)
     for i, name in enumerate(optimizer.asset_names):
         asset_return = optimizer.expected_returns[i]
         asset_vol = optimizer.volatilities[i]
-        ax.scatter(asset_vol, asset_return, s=150, c='red', alpha=0.6, 
+        ax.scatter(asset_vol, asset_return, s=120, c='red', alpha=0.6, 
                   edgecolors='darkred', linewidth=1.5, zorder=5)
         ax.annotate(name, (asset_vol, asset_return), 
                    xytext=(10, 5), textcoords='offset points',
                    fontsize=10, fontweight='bold')
     
-    # Plot special portfolios
+    # Plot special portfolios (all same size, slightly larger than assets)
     if portfolios['tangency']:
         tang = portfolios['tangency']
         ax.scatter(tang['volatility'], tang['expected_return'], 
-                  s=200, c='black', marker='*', label='Tangency',
-                  edgecolors='white', linewidth=1.5, zorder=6)
+                  s=250, c='black', marker='*', label='Tangency',
+                  edgecolors='white', linewidth=2, zorder=6)
     
     if portfolios['optimal']:
         opt = portfolios['optimal']
         ax.scatter(opt['volatility'], opt['expected_return'],
-                  s=180, c='purple', marker='D', label='Optimal',
-                  edgecolors='white', linewidth=1.5, zorder=6)
+                  s=250, c='purple', marker='D', label='Optimal',
+                  edgecolors='white', linewidth=2, zorder=6)
     
     if portfolios['gmv']:
         gmv = portfolios['gmv']
         ax.scatter(gmv['volatility'], gmv['expected_return'],
-                  s=180, c='orange', marker='s', label='GMV',
-                  edgecolors='white', linewidth=1.5, zorder=6)
+                  s=250, c='orange', marker='s', label='GMV',
+                  edgecolors='white', linewidth=2, zorder=6)
     
     # Plot CAL if risk-free asset is used
     if use_riskless and portfolios['tangency']:
