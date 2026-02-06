@@ -2,7 +2,7 @@
 Mean-Variance Portfolio Optimizer
 Streamlit Web Application
 
-Columbia Business School - Asset Management
+Columbia Business School - Asset Management - Andy Zhang
 """
 
 import streamlit as st
@@ -20,14 +20,14 @@ from utils import (format_portfolio_results, create_correlation_matrix_template,
 # Page configuration
 st.set_page_config(
     page_title="Mean-Variance Portfolio Optimizer",
-    page_icon="📊",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # Title
 st.title("Mean-Variance Portfolio Optimizer")
-st.markdown("**Columbia Business School - Asset Management**")
+st.markdown("**Columbia Business School - Asset Management - Andy Zhang**")
 st.markdown("---")
 
 # Initialize session state
