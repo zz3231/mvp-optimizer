@@ -16,21 +16,26 @@ class SensitivityAnalyzer:
     using the wrong estimates?
     """
     
-    def __init__(self, base_optimizer, optimal_weights):
+    def __init__(self, base_optimizer, optimal_portfolio):
         """
         Parameters:
         -----------
         base_optimizer : MeanVarianceOptimizer
             Optimizer with user's estimated parameters
-        optimal_weights : array
-            Optimal portfolio weights (these stay FIXED)
+        optimal_portfolio : dict
+            Full optimal portfolio dict with all metrics
         """
         self.base_optimizer = base_optimizer
-        self.optimal_weights = optimal_weights
+        self.optimal_weights = optimal_portfolio['weights']
         
-        # Base portfolio metrics using user's estimated parameters
-        self.base_return = base_optimizer.portfolio_return(optimal_weights)
-        self.base_volatility = base_optimizer.portfolio_volatility(optimal_weights)
+        # Use the OPTIMAL portfolio's metrics directly
+        # (these already account for risk-free if applicable)
+        self.base_return = optimal_portfolio['expected_return']
+        self.base_volatility = optimal_portfolio['volatility']
+        
+        # Check if risk-free is included
+        self.weight_riskfree = optimal_portfolio.get('weight_riskfree', 0.0)
+        self.weight_tangency = optimal_portfolio.get('weight_tangency', 1.0)
     
     def analyze_return_sensitivity(self, percentage_change=0.01):
         """
@@ -52,9 +57,15 @@ class SensitivityAnalyzer:
                 true_returns = self.base_optimizer.expected_returns.copy()
                 true_returns[asset_idx] += multiplier * percentage_change
                 
-                # Calculate portfolio performance with FIXED weights
-                # but different market returns
-                portfolio_return = np.dot(self.optimal_weights, true_returns)
+                # Calculate risky portfolio return with FIXED weights
+                # Note: optimal_weights already includes tangency scaling
+                risky_return = np.dot(self.optimal_weights, true_returns)
+                
+                # Total portfolio return (including risk-free if applicable)
+                # risky_return is already the return of the risky part
+                # We need to add risk-free contribution
+                portfolio_return = (self.weight_riskfree * self.base_optimizer.risk_free_rate + 
+                                   risky_return)
                 
                 # Volatility doesn't change (only depends on vols and correlations)
                 portfolio_volatility = self.base_volatility
@@ -105,7 +116,7 @@ class SensitivityAnalyzer:
                 # Expected return doesn't change (only depends on returns)
                 portfolio_return = self.base_return
                 
-                # Volatility DOES change
+                # Portfolio volatility (optimal_weights already includes scaling)
                 portfolio_variance = np.dot(self.optimal_weights, 
                                            np.dot(true_cov, self.optimal_weights))
                 portfolio_volatility = np.sqrt(max(0, portfolio_variance))

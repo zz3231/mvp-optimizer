@@ -368,7 +368,6 @@ with tab1:
             
             with col2:
                 st.subheader("Optimal Portfolio")
-                st.markdown("*Combination of Tangency + Risk-Free*")
                 if portfolios['optimal']:
                     result = format_portfolio_results(portfolios['optimal'], "Optimal")
                     st.dataframe(result['weights_df'], hide_index=True)
@@ -396,7 +395,6 @@ with tab1:
             
             with col1:
                 st.subheader("Optimal Portfolio")
-                st.markdown("*Maximizes Utility Function*")
                 if portfolios['optimal']:
                     result = format_portfolio_results(portfolios['optimal'], "Optimal")
                     st.dataframe(result['weights_df'], hide_index=True)
@@ -447,7 +445,7 @@ with tab2:
                 try:
                     sensitivity = SensitivityAnalyzer(
                         base_optimizer=st.session_state.optimizer,
-                        optimal_weights=st.session_state.optimal['weights']
+                        optimal_portfolio=st.session_state.optimal
                     )
                     
                     # Analyze
@@ -459,12 +457,10 @@ with tab2:
                         percentage_change=0.01
                     )
                     
+                    # Store sensitivity results
                     st.session_state.df_return_sens = df_return_sens
                     st.session_state.df_vol_sens = df_vol_sens
-                    st.session_state.sensitivity_base = {
-                        'return': sensitivity.base_return,
-                        'volatility': sensitivity.base_volatility
-                    }
+                    # Base metrics are taken directly from optimal portfolio
                     
                     st.success("Sensitivity analysis completed!")
                     
@@ -475,14 +471,14 @@ with tab2:
         if 'df_return_sens' in st.session_state:
             st.markdown("---")
             
-            # Base metrics
+            # Base metrics - directly from optimal portfolio
             st.subheader("Optimal Portfolio Metrics (Fixed Weights)")
             col1, col2 = st.columns(2)
-            base = st.session_state.sensitivity_base
+            optimal = st.session_state.optimal
             with col1:
-                st.metric("Expected Return", f"{base['return']:.2%}")
+                st.metric("Expected Return", f"{optimal['expected_return']:.2%}")
             with col2:
-                st.metric("Volatility", f"{base['volatility']:.2%}")
+                st.metric("Volatility", f"{optimal['volatility']:.2%}")
             
             st.markdown("---")
             
