@@ -90,6 +90,12 @@ risk_free_rate = st.sidebar.number_input(
     format="%.2f"
 ) / 100
 
+# Use risk-free asset
+use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
+
+# Use constraints
+use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
+
 # Use target return (must be before Risk Aversion to control its disabled state)
 use_target_return = st.sidebar.checkbox("Use Target Return", value=False)
 
@@ -116,12 +122,6 @@ if use_target_return:
     ) / 100  # Convert to decimal
 else:
     target_return = None
-
-# Use risk-free asset
-use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
-
-# Use constraints
-use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### About")
