@@ -54,4 +54,21 @@ htmlcov/
 
 # Logs
 *.log
+
+# Git credentials
+.git_token
+
+# Documentation and scripts (not needed for deployment)
+DEPLOYMENT.md
+FIX_AUTH_ERROR.md
+GITHUB_STREAMLIT_GUIDE.md
+PROJECT_SUMMARY.md
+QUICKSTART.md
+SSH_COMPLETE_GUIDE.md
+STEP_BY_STEP_DEPLOY.md
+deploy_to_github.sh
+fix_email_privacy.sh
+push_with_token.sh
+setup_ssh.sh
+test.py
 .git_token
