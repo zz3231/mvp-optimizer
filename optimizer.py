@@ -229,6 +229,50 @@ class MeanVarianceOptimizer:
             'success': True
         }
     
+    def find_target_return_portfolio_without_riskfree(self, target_return, constraints=None):
+        """
+        Find portfolio on efficient frontier with target return
+        
+        Minimize volatility subject to:
+        - Portfolio return = target_return
+        - Sum of weights = 1
+        - Optional constraints on weights
+        """
+        x0 = np.ones(self.n_assets) / self.n_assets
+        
+        if constraints is not None:
+            lower = np.array(constraints['lower_bounds'])
+            upper = np.array(constraints['upper_bounds'])
+            # Handle infinite bounds
+            lower = np.where(np.isinf(lower), -1e10, lower)
+            upper = np.where(np.isinf(upper), 1e10, upper)
+            bounds = tuple(zip(lower, upper))
+        else:
+            bounds = tuple((0, 1) for _ in range(self.n_assets))
+        
+        constraint_sum = {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}
+        constraint_return = {'type': 'eq', 'fun': lambda x: self.portfolio_return(x) - target_return}
+        
+        objective = lambda x: self.portfolio_volatility(x)
+        
+        result = minimize(objective, x0, method='SLSQP',
+                        bounds=bounds, 
+                        constraints=[constraint_sum, constraint_return],
+                        options={'maxiter': 1000, 'ftol': 1e-9})
+        
+        if result.success:
+            weights = result.x
+            return {
+                'weights': weights,
+                'weights_dict': dict(zip(self.asset_names, weights)),
+                'expected_return': self.portfolio_return(weights),
+                'volatility': self.portfolio_volatility(weights),
+                'sharpe_ratio': self.portfolio_sharpe_ratio(weights),
+                'success': True
+            }
+        
+        return None
+    
     def compute_efficient_frontier(self, n_points=100, constraints=None, extend_to_return=None):
         """
         Compute efficient frontier with smart range selection

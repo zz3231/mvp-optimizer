@@ -85,6 +85,21 @@ use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
 # Use constraints
 use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
 
+# Use target return
+use_target_return = st.sidebar.checkbox("Use Target Return", value=False)
+
+if use_target_return:
+    target_return = st.sidebar.number_input(
+        "Target Return (%)",
+        min_value=0.0,
+        max_value=100.0,
+        value=10.0,
+        step=0.1,
+        format="%.2f"
+    ) / 100  # Convert to decimal
+else:
+    target_return = None
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("### About")
 st.sidebar.info(
@@ -324,14 +339,26 @@ with tab1:
                     portfolios['gmv'] = gmv
                     
                     # Optimal
-                    if use_riskless and tangency:
-                        optimal = optimizer.find_optimal_portfolio_with_riskfree(
-                            tangency, risk_aversion
-                        )
+                    if use_target_return:
+                        # Use target return mode
+                        if use_riskless and tangency:
+                            optimal = optimizer.find_target_return_portfolio_with_riskfree(
+                                tangency, target_return
+                            )
+                        else:
+                            optimal = optimizer.find_target_return_portfolio_without_riskfree(
+                                target_return, constraints
+                            )
                     else:
-                        optimal = optimizer.find_optimal_portfolio_without_riskfree(
-                            risk_aversion, constraints
-                        )
+                        # Use risk aversion mode
+                        if use_riskless and tangency:
+                            optimal = optimizer.find_optimal_portfolio_with_riskfree(
+                                tangency, risk_aversion
+                            )
+                        else:
+                            optimal = optimizer.find_optimal_portfolio_without_riskfree(
+                                risk_aversion, constraints
+                            )
                     portfolios['optimal'] = optimal
                     
                     st.session_state.portfolios = portfolios
@@ -375,6 +402,8 @@ with tab1:
             
             with col2:
                 st.subheader("Optimal Portfolio")
+                if use_target_return:
+                    st.caption(f"Target Return: {target_return:.2%}")
                 if portfolios['optimal']:
                     result = format_portfolio_results(portfolios['optimal'], "Optimal")
                     st.dataframe(result['weights_df'], hide_index=True)
@@ -402,6 +431,8 @@ with tab1:
             
             with col1:
                 st.subheader("Optimal Portfolio")
+                if use_target_return:
+                    st.caption(f"Target Return: {target_return:.2%}")
                 if portfolios['optimal']:
                     result = format_portfolio_results(portfolios['optimal'], "Optimal")
                     st.dataframe(result['weights_df'], hide_index=True)
