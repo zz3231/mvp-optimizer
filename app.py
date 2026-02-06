@@ -541,6 +541,12 @@ with tab2:
         
         # Display results
         if 'df_return_sens' in st.session_state:
+            # Check if sharpe_impact column exists (for backward compatibility)
+            has_sharpe = 'sharpe_impact' in st.session_state.df_return_sens.columns
+            
+            if not has_sharpe:
+                st.warning("⚠️ Sensitivity analysis data is from an older version. Please click 'Run Sensitivity Analysis' again to see Sharpe Ratio impacts.")
+            
             st.markdown("---")
             
             # Base metrics - directly from optimal portfolio
@@ -554,45 +560,65 @@ with tab2:
             
             st.markdown("---")
             
-            # Plots
-            st.subheader("Impact of Parameter Errors on Fixed Portfolio")
-            st.markdown(
-                "**Methodology**: Portfolio weights are fixed at optimal values. "
-                "We change each asset's parameter by ±1 percentage point (e.g., 10% → 11% or 10% → 9%), "
-                "then measure the impact on portfolio performance.\n\n"
-                "**Key Insight**: Sharpe Ratio provides a unified metric to compare the cost of "
-                "expected return errors vs. volatility errors. This helps identify which parameters "
-                "require more accurate estimation."
-            )
-            
-            fig = plot_sensitivity_analysis(
-                st.session_state.df_return_sens,
-                st.session_state.df_vol_sens
-            )
-            st.pyplot(fig)
-            plt.close()
-            
-            # Data tables
-            st.markdown("---")
-            st.subheader("Detailed Impact Data")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("**Expected Return Error Impacts**")
-                # Show return and sharpe impacts
-                df_display = st.session_state.df_return_sens[['asset', 'direction', 'return_impact', 'sharpe_impact']].copy()
-                df_display['return_impact'] = df_display['return_impact'].apply(lambda x: f"{x:.6f}")
-                df_display['sharpe_impact'] = df_display['sharpe_impact'].apply(lambda x: f"{x:.6f}")
-                st.dataframe(df_display, hide_index=True)
-            
-            with col2:
-                st.markdown("**Volatility Error Impacts**")
-                # Show volatility and sharpe impacts
-                df_display = st.session_state.df_vol_sens[['asset', 'direction', 'volatility_impact', 'sharpe_impact']].copy()
-                df_display['volatility_impact'] = df_display['volatility_impact'].apply(lambda x: f"{x:.6f}")
-                df_display['sharpe_impact'] = df_display['sharpe_impact'].apply(lambda x: f"{x:.6f}")
-                st.dataframe(df_display, hide_index=True)
+            # Only show plots if data has sharpe_impact
+            if has_sharpe:
+                # Plots
+                st.subheader("Impact of Parameter Errors on Fixed Portfolio")
+                st.markdown(
+                    "**Methodology**: Portfolio weights are fixed at optimal values. "
+                    "We change each asset's parameter by ±1 percentage point (e.g., 10% → 11% or 10% → 9%), "
+                    "then measure the impact on portfolio performance.\n\n"
+                    "**Key Insight**: Sharpe Ratio provides a unified metric to compare the cost of "
+                    "expected return errors vs. volatility errors. This helps identify which parameters "
+                    "require more accurate estimation."
+                )
+                
+                fig = plot_sensitivity_analysis(
+                    st.session_state.df_return_sens,
+                    st.session_state.df_vol_sens
+                )
+                st.pyplot(fig)
+                plt.close()
+                
+                # Data tables
+                st.markdown("---")
+                st.subheader("Detailed Impact Data")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**Expected Return Error Impacts**")
+                    # Show return and sharpe impacts
+                    df_display = st.session_state.df_return_sens[['asset', 'direction', 'return_impact', 'sharpe_impact']].copy()
+                    df_display['return_impact'] = df_display['return_impact'].apply(lambda x: f"{x:.6f}")
+                    df_display['sharpe_impact'] = df_display['sharpe_impact'].apply(lambda x: f"{x:.6f}")
+                    st.dataframe(df_display, hide_index=True)
+                
+                with col2:
+                    st.markdown("**Volatility Error Impacts**")
+                    # Show volatility and sharpe impacts
+                    df_display = st.session_state.df_vol_sens[['asset', 'direction', 'volatility_impact', 'sharpe_impact']].copy()
+                    df_display['volatility_impact'] = df_display['volatility_impact'].apply(lambda x: f"{x:.6f}")
+                    df_display['sharpe_impact'] = df_display['sharpe_impact'].apply(lambda x: f"{x:.6f}")
+                    st.dataframe(df_display, hide_index=True)
+            else:
+                # Show old format without sharpe ratio
+                st.subheader("Impact of Parameter Errors (Basic View)")
+                st.info("Run sensitivity analysis again to see the new Sharpe Ratio impact analysis.")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**Expected Return Error → Portfolio Return Impact**")
+                    df_display = st.session_state.df_return_sens[['asset', 'direction', 'return_impact']].copy()
+                    df_display['return_impact'] = df_display['return_impact'].apply(lambda x: f"{x:.6f}")
+                    st.dataframe(df_display, hide_index=True)
+                
+                with col2:
+                    st.markdown("**Volatility Error → Portfolio Volatility Impact**")
+                    df_display = st.session_state.df_vol_sens[['asset', 'direction', 'volatility_impact']].copy()
+                    df_display['volatility_impact'] = df_display['volatility_impact'].apply(lambda x: f"{x:.6f}")
+                    st.dataframe(df_display, hide_index=True)
 
 with tab3:
     st.header("Instructions")
