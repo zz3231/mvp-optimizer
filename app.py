@@ -90,7 +90,16 @@ risk_free_rate = st.sidebar.number_input(
     format="%.2f"
 ) / 100
 
-# Risk aversion
+# Use risk-free asset
+use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
+
+# Use constraints
+use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
+
+# Use target return (must be before Risk Aversion to control its disabled state)
+use_target_return = st.sidebar.checkbox("Use Target Return", value=False)
+
+# Risk aversion (disabled when using target return)
 risk_aversion = st.sidebar.number_input(
     "Risk Aversion Coefficient",
     min_value=0.01,
@@ -98,18 +107,8 @@ risk_aversion = st.sidebar.number_input(
     value=3.0,
     step=0.01,
     format="%.2f",
-    disabled=st.session_state.get('use_target_return_mode', False)
+    disabled=use_target_return
 )
-
-# Use risk-free asset
-use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
-
-# Use constraints
-use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
-
-# Use target return
-use_target_return = st.sidebar.checkbox("Use Target Return", value=False)
-st.session_state['use_target_return_mode'] = use_target_return
 
 if use_target_return:
     target_return = st.sidebar.number_input(
