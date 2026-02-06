@@ -72,9 +72,14 @@ class MeanVarianceOptimizer:
         x0 = np.ones(self.n_assets) / self.n_assets
         
         if constraints is not None:
-            bounds = tuple(zip(constraints['lower_bounds'], 
-                             constraints['upper_bounds']))
+            lower = np.array(constraints['lower_bounds'])
+            upper = np.array(constraints['upper_bounds'])
+            # Handle infinite bounds
+            lower = np.where(np.isinf(lower), -1e10, lower)
+            upper = np.where(np.isinf(upper), 1e10, upper)
+            bounds = tuple(zip(lower, upper))
         else:
+            # Default: no short selling
             bounds = tuple((0, 1) for _ in range(self.n_assets))
         
         constraint_sum = {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}
@@ -101,8 +106,12 @@ class MeanVarianceOptimizer:
         x0 = np.ones(self.n_assets) / self.n_assets
         
         if constraints is not None:
-            bounds = tuple(zip(constraints['lower_bounds'], 
-                             constraints['upper_bounds']))
+            lower = np.array(constraints['lower_bounds'])
+            upper = np.array(constraints['upper_bounds'])
+            # Handle infinite bounds
+            lower = np.where(np.isinf(lower), -1e10, lower)
+            upper = np.where(np.isinf(upper), 1e10, upper)
+            bounds = tuple(zip(lower, upper))
         else:
             bounds = tuple((0, 1) for _ in range(self.n_assets))
         
@@ -161,8 +170,12 @@ class MeanVarianceOptimizer:
         x0 = np.ones(self.n_assets) / self.n_assets
         
         if constraints is not None:
-            bounds = tuple(zip(constraints['lower_bounds'], 
-                             constraints['upper_bounds']))
+            lower = np.array(constraints['lower_bounds'])
+            upper = np.array(constraints['upper_bounds'])
+            # Handle infinite bounds
+            lower = np.where(np.isinf(lower), -1e10, lower)
+            upper = np.where(np.isinf(upper), 1e10, upper)
+            bounds = tuple(zip(lower, upper))
         else:
             bounds = tuple((0, 1) for _ in range(self.n_assets))
         
@@ -229,8 +242,12 @@ class MeanVarianceOptimizer:
             x0 = np.ones(self.n_assets) / self.n_assets
             
             if constraints is not None:
-                bounds = tuple(zip(constraints['lower_bounds'], 
-                                 constraints['upper_bounds']))
+                lower = np.array(constraints['lower_bounds'])
+                upper = np.array(constraints['upper_bounds'])
+                # Handle infinite bounds
+                lower = np.where(np.isinf(lower), -1e10, lower)
+                upper = np.where(np.isinf(upper), 1e10, upper)
+                bounds = tuple(zip(lower, upper))
             else:
                 bounds = tuple((0, 1) for _ in range(self.n_assets))
             

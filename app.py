@@ -72,11 +72,11 @@ risk_free_rate = st.sidebar.number_input(
 # Risk aversion
 risk_aversion = st.sidebar.number_input(
     "Risk Aversion Coefficient",
-    min_value=0.1,
+    min_value=0.01,
     max_value=10.0,
     value=3.0,
-    step=0.1,
-    format="%.1f"
+    step=0.01,
+    format="%.2f"
 )
 
 # Use risk-free asset
@@ -189,30 +189,31 @@ with tab1:
     # Correlation Matrix
     st.subheader("3. Correlation Matrix")
     
-    # Create default correlation matrix
-    default_corr = np.eye(n_assets)
-    if n_assets == 3:
-        default_corr = np.array([
-            [1.0, 0.5, 0.4],
-            [0.5, 1.0, 0.25],
-            [0.4, 0.25, 1.0]
-        ])
-    elif n_assets > 3:
-        # Fill with moderate correlations
+    # Initialize correlation matrix in session state if not exists
+    if 'corr_matrix_values' not in st.session_state or len(st.session_state.corr_matrix_values) != n_assets:
         default_corr = np.eye(n_assets)
-        for i in range(n_assets):
-            for j in range(i+1, n_assets):
-                default_corr[i, j] = default_corr[j, i] = 0.3
+        if n_assets == 3:
+            default_corr = np.array([
+                [1.0, 0.5, 0.4],
+                [0.5, 1.0, 0.25],
+                [0.4, 0.25, 1.0]
+            ])
+        elif n_assets > 3:
+            default_corr = np.eye(n_assets)
+            for i in range(n_assets):
+                for j in range(i+1, n_assets):
+                    default_corr[i, j] = default_corr[j, i] = 0.3
+        st.session_state.corr_matrix_values = default_corr
     
     # Display correlation matrix input
-    corr_matrix = []
+    corr_matrix = np.copy(st.session_state.corr_matrix_values)
+    
     for i in range(n_assets):
-        row = []
         cols = st.columns(n_assets)
         for j in range(n_assets):
             with cols[j]:
                 if i == j:
-                    val = 1.0
+                    # Diagonal elements are always 1
                     st.text_input(
                         f"corr_{i}_{j}",
                         value="1.00",
@@ -221,30 +222,33 @@ with tab1:
                         label_visibility="collapsed"
                     )
                 elif i < j:
+                    # Upper triangle - editable
                     val = st.number_input(
                         f"corr_{i}_{j}",
                         min_value=-1.0,
                         max_value=1.0,
-                        value=float(default_corr[i, j]),
+                        value=float(corr_matrix[i, j]),
                         step=0.01,
                         key=f"corr_{i}_{j}",
                         label_visibility="collapsed"
                     )
+                    corr_matrix[i, j] = val
+                    corr_matrix[j, i] = val  # Mirror to lower triangle
                 else:
-                    # Mirror upper triangle
-                    val = corr_matrix[j][i]
+                    # Lower triangle - display only (mirrored from upper)
                     st.text_input(
                         f"corr_{i}_{j}",
-                        value=f"{val:.2f}",
+                        value=f"{corr_matrix[i, j]:.2f}",
                         disabled=True,
                         key=f"corr_{i}_{j}_mirror",
                         label_visibility="collapsed"
                     )
-                row.append(val)
-        corr_matrix.append(row)
+    
+    # Update session state
+    st.session_state.corr_matrix_values = corr_matrix
     
     # Convert to numpy array
-    correlation_matrix = np.array(corr_matrix)
+    correlation_matrix = corr_matrix
     
     st.markdown("---")
     
@@ -279,7 +283,13 @@ with tab1:
                             'upper_bounds': upper_bounds
                         }
                     else:
-                        constraints = None
+                        # Without constraints: allow short selling
+                        constraints = {
+                            'lower_bounds': [-np.inf] * len(asset_names),
+                            'upper_bounds': [np.inf] * len(asset_names)
+                        }
+                        # Note: We still need to pass constraints object for the optimizer
+                        # but with infinite bounds to allow any position
                     
                     # Store in session state
                     st.session_state.optimizer = optimizer
