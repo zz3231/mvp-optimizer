@@ -112,19 +112,19 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
     vol_range = vol_max - vol_min if vol_max > vol_min else vol_max * 0.1
     ret_range = ret_max - ret_min if ret_max > ret_min else ret_max * 0.1
     
-    # Smart axis limits with proportional margins (increased for more space)
+    # Smart axis limits with proportional margins (generous spacing)
     # X-axis: If risk-free is included (vol_min ≈ 0), start from 0
     # Otherwise, add margin on left too
     if use_riskless or vol_min < 0.01:
         x_min = 0
-        x_max = vol_max + vol_range * 0.20  # 20% margin on right (was 15%)
+        x_max = vol_max + vol_range * 0.25  # 25% margin on right
     else:
-        x_min = max(0, vol_min - vol_range * 0.15)  # 15% margin on left (was 10%)
-        x_max = vol_max + vol_range * 0.20  # 20% margin on right
+        x_min = max(0, vol_min - vol_range * 0.20)  # 20% margin on left
+        x_max = vol_max + vol_range * 0.25  # 25% margin on right
     
-    # Y-axis: Add proportional margins on both sides (increased)
-    y_min = max(0, ret_min - ret_range * 0.15)  # 15% margin below (was 10%)
-    y_max = ret_max + ret_range * 0.20  # 20% margin above (was 15%)
+    # Y-axis: Add proportional margins on both sides
+    y_min = max(0, ret_min - ret_range * 0.20)  # 20% margin below
+    y_max = ret_max + ret_range * 0.25  # 25% margin above
     
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
