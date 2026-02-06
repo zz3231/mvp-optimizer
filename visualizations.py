@@ -103,17 +103,30 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
         all_returns.append(optimizer.risk_free_rate)
     
     # Calculate ranges based on portfolios and assets (NOT frontier)
-    vol_max = max(all_vols)
-    ret_min, ret_max = min(all_returns), max(all_returns)
-    ret_range = ret_max - ret_min
+    all_vols_array = np.array(all_vols)
+    all_returns_array = np.array(all_returns)
     
-    # X-axis: From 0, extend 10% beyond max
-    ax.set_xlim(0, vol_max * 1.10)
+    vol_min, vol_max = all_vols_array.min(), all_vols_array.max()
+    ret_min, ret_max = all_returns_array.min(), all_returns_array.max()
     
-    # Y-axis: From 0 (or slightly below min if no risk-free), with margin above
-    y_min = 0  # Always start from 0%
-    y_max = ret_max + ret_range * 0.10  # Add 10% margin above max
+    vol_range = vol_max - vol_min if vol_max > vol_min else vol_max * 0.1
+    ret_range = ret_max - ret_min if ret_max > ret_min else ret_max * 0.1
     
+    # Smart axis limits with proportional margins
+    # X-axis: If risk-free is included (vol_min ≈ 0), start from 0
+    # Otherwise, add margin on left too
+    if use_riskless or vol_min < 0.01:
+        x_min = 0
+        x_max = vol_max + vol_range * 0.15  # 15% margin on right
+    else:
+        x_min = max(0, vol_min - vol_range * 0.1)  # 10% margin on left
+        x_max = vol_max + vol_range * 0.15  # 15% margin on right
+    
+    # Y-axis: Add proportional margins on both sides
+    y_min = max(0, ret_min - ret_range * 0.1)  # 10% margin below, but not below 0
+    y_max = ret_max + ret_range * 0.15  # 15% margin above
+    
+    ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
     
     # Improved legend
