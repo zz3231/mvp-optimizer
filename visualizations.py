@@ -75,6 +75,35 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
     ax.set_ylabel('Expected Return', fontsize=13, fontweight='bold')
     ax.set_title('Mean-Variance Efficient Frontier', fontsize=15, fontweight='bold', pad=20)
     
+    # Set smart axis limits based on data
+    # Collect all relevant points
+    all_vols = list(optimizer.volatilities) + list(frontier['volatilities'])
+    all_returns = list(optimizer.expected_returns) + list(frontier['returns'])
+    
+    if portfolios['tangency']:
+        all_vols.append(portfolios['tangency']['volatility'])
+        all_returns.append(portfolios['tangency']['expected_return'])
+    if portfolios['optimal']:
+        all_vols.append(portfolios['optimal']['volatility'])
+        all_returns.append(portfolios['optimal']['expected_return'])
+    if portfolios['gmv']:
+        all_vols.append(portfolios['gmv']['volatility'])
+        all_returns.append(portfolios['gmv']['expected_return'])
+    
+    # Calculate ranges with small margin
+    vol_min, vol_max = min(all_vols), max(all_vols)
+    ret_min, ret_max = min(all_returns), max(all_returns)
+    
+    vol_range = vol_max - vol_min
+    ret_range = ret_max - ret_min
+    
+    # Add 10% margin on each side
+    margin = 0.1
+    ax.set_xlim(max(0, vol_min - vol_range * margin), 
+                vol_max + vol_range * margin)
+    ax.set_ylim(ret_min - ret_range * margin, 
+                ret_max + ret_range * margin)
+    
     # Improved legend
     ax.legend(loc='best', fontsize=10, framealpha=0.95, 
              edgecolor='gray', fancybox=True, shadow=True)

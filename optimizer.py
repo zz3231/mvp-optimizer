@@ -230,10 +230,28 @@ class MeanVarianceOptimizer:
         }
     
     def compute_efficient_frontier(self, n_points=100, constraints=None):
-        """Compute efficient frontier"""
-        # Extend range very widely to ensure complete coverage
-        min_return = np.min(self.expected_returns) * 0.3
-        max_return = np.max(self.expected_returns) * 2.0
+        """
+        Compute efficient frontier with smart range selection
+        
+        Strategy: Find min/max returns that are actually achievable,
+        then extend slightly for visual completeness
+        """
+        # Start with a reasonable range around asset returns
+        asset_min_return = np.min(self.expected_returns)
+        asset_max_return = np.max(self.expected_returns)
+        
+        # Calculate approximate GMV return (lower bound)
+        # GMV typically has return between min and mean
+        gmv_approx_return = asset_min_return * 0.9
+        
+        # Calculate approximate tangency return (upper bound)
+        # Tangency typically near or above max asset return
+        tangency_approx_return = asset_max_return * 1.1
+        
+        # Set target range: from below GMV to above tangency
+        min_return = gmv_approx_return * 0.95
+        max_return = tangency_approx_return * 1.05
+        
         target_returns = np.linspace(min_return, max_return, n_points)
         
         frontier_volatility = []
