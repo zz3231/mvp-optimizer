@@ -80,10 +80,6 @@ if n_assets != st.session_state.n_assets:
         # Remove assets
         st.session_state.asset_names = st.session_state.asset_names[:n_assets]
 
-# Initialize session state for use_target_return if not exists
-if 'use_target_return' not in st.session_state:
-    st.session_state.use_target_return = False
-
 # Risk-free rate
 risk_free_rate = st.sidebar.number_input(
     "Risk-Free Rate (%)",
@@ -94,7 +90,10 @@ risk_free_rate = st.sidebar.number_input(
     format="%.2f"
 ) / 100
 
-# Risk aversion (disabled when using target return, reads from session_state)
+# Use target return (must be before Risk Aversion to control its disabled state)
+use_target_return = st.sidebar.checkbox("Use Target Return", value=False)
+
+# Risk aversion (disabled when using target return)
 risk_aversion = st.sidebar.number_input(
     "Risk Aversion Coefficient",
     min_value=0.01,
@@ -102,22 +101,8 @@ risk_aversion = st.sidebar.number_input(
     value=3.0,
     step=0.01,
     format="%.2f",
-    disabled=st.session_state.use_target_return
+    disabled=use_target_return
 )
-
-# Use risk-free asset
-use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
-
-# Use constraints
-use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
-
-# Use target return (now at the bottom)
-use_target_return = st.sidebar.checkbox(
-    "Use Target Return", 
-    value=st.session_state.use_target_return
-)
-# Update session state
-st.session_state.use_target_return = use_target_return
 
 if use_target_return:
     target_return = st.sidebar.number_input(
@@ -131,6 +116,12 @@ if use_target_return:
     ) / 100  # Convert to decimal
 else:
     target_return = None
+
+# Use risk-free asset
+use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
+
+# Use constraints
+use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### About")
