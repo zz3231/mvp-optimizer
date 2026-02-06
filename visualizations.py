@@ -100,11 +100,11 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
     ret_min, ret_max = min(all_returns), max(all_returns)
     ret_range = ret_max - ret_min
     
-    # X-axis: Always start from 0 (to show risk-free), extend only 5% beyond max
-    ax.set_xlim(0, vol_max * 1.05)
+    # X-axis: Always start from 0 (to show risk-free), extend 10% beyond max
+    ax.set_xlim(0, vol_max * 1.10)
     
-    # Y-axis: Add 8% margin on both sides
-    ax.set_ylim(ret_min - ret_range * 0.08, ret_max + ret_range * 0.08)
+    # Y-axis: Add 10% margin on both sides
+    ax.set_ylim(ret_min - ret_range * 0.10, ret_max + ret_range * 0.10)
     
     # Improved legend
     ax.legend(loc='best', fontsize=10, framealpha=0.95, 
