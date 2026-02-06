@@ -134,10 +134,17 @@ class MeanVarianceOptimizer:
             }
         return None
     
-    def find_optimal_portfolio_with_riskfree(self, tangency_portfolio, risk_aversion):
+    def find_optimal_portfolio_with_riskfree(self, tangency_portfolio, risk_aversion, 
+                                             limited_borrowing=False):
         """
         Find optimal portfolio as combination of tangency and risk-free asset
         Formula: w* = (E[r_tangency] - r_f) / (A * sigma_tangency^2)
+        
+        Parameters:
+        -----------
+        limited_borrowing : bool
+            If True, w_riskfree >= 0 (cannot borrow)
+            If False, w_riskfree can be negative (can borrow to leverage)
         """
         r_tangency = tangency_portfolio['expected_return']
         sigma_tangency = tangency_portfolio['volatility']
@@ -145,6 +152,12 @@ class MeanVarianceOptimizer:
         # Weight on tangency portfolio
         w_tangency = (r_tangency - self.risk_free_rate) / (risk_aversion * sigma_tangency**2)
         w_riskfree = 1 - w_tangency
+        
+        # Apply limited borrowing constraint if needed
+        if limited_borrowing and w_riskfree < 0:
+            # Cannot borrow, so set w_riskfree = 0 and w_tangency = 1
+            w_riskfree = 0.0
+            w_tangency = 1.0
         
         # Weights on individual risky assets
         risky_weights = w_tangency * tangency_portfolio['weights']
@@ -199,17 +212,52 @@ class MeanVarianceOptimizer:
             }
         return None
     
-    def find_target_return_portfolio_with_riskfree(self, tangency_portfolio, target_return):
-        """Find portfolio on CAL with target return"""
+    def find_target_return_portfolio_with_riskfree(self, tangency_portfolio, target_return,
+                                                    limited_borrowing=False):
+        """
+        Find portfolio on CAL with target return
+        
+        Parameters:
+        -----------
+        limited_borrowing : bool
+            If True, w_riskfree >= 0 (cannot borrow)
+        """
         r_tangency = tangency_portfolio['expected_return']
         sigma_tangency = tangency_portfolio['volatility']
         
+        # Validate target return
         if target_return < self.risk_free_rate:
-            target_return = self.risk_free_rate
+            # Below risk-free rate, just invest in risk-free
+            return {
+                'weights': np.zeros(self.n_assets),
+                'weights_dict': dict(zip(self.asset_names, np.zeros(self.n_assets))),
+                'weight_tangency': 0.0,
+                'weight_riskfree': 1.0,
+                'expected_return': self.risk_free_rate,
+                'volatility': 0.0,
+                'sharpe_ratio': 0.0,
+                'success': True
+            }
         
         # Weight on tangency portfolio
         w_tangency = (target_return - self.risk_free_rate) / (r_tangency - self.risk_free_rate)
         w_riskfree = 1 - w_tangency
+        
+        # Check limited borrowing constraint
+        if limited_borrowing and w_riskfree < 0:
+            # Cannot achieve target return without borrowing
+            # Return tangency portfolio (max achievable without borrowing)
+            return {
+                'weights': tangency_portfolio['weights'],
+                'weights_dict': tangency_portfolio['weights_dict'],
+                'weight_tangency': 1.0,
+                'weight_riskfree': 0.0,
+                'expected_return': r_tangency,
+                'volatility': sigma_tangency,
+                'sharpe_ratio': tangency_portfolio['sharpe_ratio'],
+                'success': True,
+                'warning': f"Target return {target_return:.2%} requires borrowing. Returning tangency portfolio."
+            }
         
         # Weights on individual risky assets
         risky_weights = w_tangency * tangency_portfolio['weights']
@@ -238,6 +286,20 @@ class MeanVarianceOptimizer:
         - Sum of weights = 1
         - Optional constraints on weights
         """
+        # Validate target return is achievable
+        # Check against GMV return (minimum achievable)
+        gmv = self.find_global_minimum_variance(constraints)
+        if gmv and target_return < gmv['expected_return']:
+            return {
+                'weights': gmv['weights'],
+                'weights_dict': gmv['weights_dict'],
+                'expected_return': gmv['expected_return'],
+                'volatility': gmv['volatility'],
+                'sharpe_ratio': gmv['sharpe_ratio'],
+                'success': True,
+                'warning': f"Target return {target_return:.2%} is below GMV return {gmv['expected_return']:.2%}. Returning GMV portfolio."
+            }
+        
         x0 = np.ones(self.n_assets) / self.n_assets
         
         if constraints is not None:
@@ -271,7 +333,12 @@ class MeanVarianceOptimizer:
                 'success': True
             }
         
-        return None
+        # If optimization fails, target may be infeasible
+        return {
+            'weights': None,
+            'success': False,
+            'warning': f"Target return {target_return:.2%} may not be achievable with current constraints."
+        }
     
     def compute_efficient_frontier(self, n_points=100, constraints=None, extend_to_return=None):
         """

@@ -82,6 +82,16 @@ risk_aversion = st.sidebar.number_input(
 # Use risk-free asset
 use_riskless = st.sidebar.checkbox("Include Risk-Free Asset", value=True)
 
+if use_riskless:
+    # Limited borrowing option
+    limited_borrowing = st.sidebar.checkbox(
+        "Limited Borrowing", 
+        value=False,
+        help="If checked, cannot borrow (w_rf >= 0). If unchecked, can borrow to leverage."
+    )
+else:
+    limited_borrowing = False
+
 # Use constraints
 use_constraints = st.sidebar.checkbox("Use Constraints", value=True)
 
@@ -95,7 +105,8 @@ if use_target_return:
         max_value=100.0,
         value=10.0,
         step=0.1,
-        format="%.2f"
+        format="%.2f",
+        help="Target portfolio return. Must be achievable given constraints."
     ) / 100  # Convert to decimal
 else:
     target_return = None
@@ -326,6 +337,9 @@ with tab1:
                     st.session_state.constraints = constraints
                     st.session_state.use_riskless = use_riskless
                     st.session_state.risk_aversion = risk_aversion
+                    st.session_state.limited_borrowing = limited_borrowing
+                    st.session_state.use_target_return = use_target_return
+                    st.session_state.target_return = target_return
                     
                     # Compute portfolios
                     portfolios = {}
@@ -343,7 +357,7 @@ with tab1:
                         # Use target return mode
                         if use_riskless and tangency:
                             optimal = optimizer.find_target_return_portfolio_with_riskfree(
-                                tangency, target_return
+                                tangency, target_return, limited_borrowing
                             )
                         else:
                             optimal = optimizer.find_target_return_portfolio_without_riskfree(
@@ -353,13 +367,21 @@ with tab1:
                         # Use risk aversion mode
                         if use_riskless and tangency:
                             optimal = optimizer.find_optimal_portfolio_with_riskfree(
-                                tangency, risk_aversion
+                                tangency, risk_aversion, limited_borrowing
                             )
                         else:
                             optimal = optimizer.find_optimal_portfolio_without_riskfree(
                                 risk_aversion, constraints
                             )
-                    portfolios['optimal'] = optimal
+                    
+                    # Show warning if target return not achievable
+                    if optimal:
+                        if not optimal.get('success', True):
+                            st.error(optimal.get('warning', 'Optimization failed'))
+                        elif optimal.get('warning'):
+                            st.warning(optimal['warning'])
+                    
+                    portfolios['optimal'] = optimal if (optimal and optimal.get('success', True)) else None
                     
                     st.session_state.portfolios = portfolios
                     st.session_state.optimal = optimal
