@@ -189,7 +189,7 @@ with tab1:
     # Correlation Matrix
     st.subheader("3. Correlation Matrix")
     
-    st.markdown("*Edit upper triangle only - lower triangle mirrors automatically*")
+    st.markdown("*Edit upper triangle only*")
     
     # Initialize correlation matrix in session state
     corr_key = f'corr_matrix_{n_assets}'
@@ -217,7 +217,7 @@ with tab1:
                 st.session_state[corr_key][i, j] = val
                 st.session_state[corr_key][j, i] = val
     
-    # Display correlation matrix with headers
+    # Display correlation matrix - upper triangle only
     # Create header row
     header_cols = st.columns([1.5] + [1] * n_assets)
     with header_cols[0]:
@@ -226,7 +226,7 @@ with tab1:
         with col:
             st.markdown(f"**{asset_names[j]}**")
     
-    # Display matrix rows
+    # Display matrix rows - only diagonal and upper triangle
     for i in range(n_assets):
         cols = st.columns([1.5] + [1] * n_assets)
         
@@ -259,14 +259,8 @@ with tab1:
                         label_visibility="collapsed"
                     )
                 else:
-                    # Lower triangle - mirror (use text_input for better display)
-                    st.text_input(
-                        f"corr_{i}_{j}",
-                        value=f"{st.session_state[corr_key][i, j]:.2f}",
-                        disabled=True,
-                        key=f"corr_mirror_{i}_{j}",
-                        label_visibility="collapsed"
-                    )
+                    # Lower triangle - don't display anything
+                    st.write("")
     
     # Build final correlation matrix from session state
     correlation_matrix = np.array(st.session_state[corr_key])
@@ -493,9 +487,10 @@ with tab2:
             # Plots
             st.subheader("Impact of Parameter Errors on Fixed Portfolio")
             st.markdown(
-                "**Key insight**: Using fixed optimal weights, if market parameters differ "
-                "from estimates, portfolio performance changes. Expected return errors only "
-                "affect portfolio return; volatility errors only affect portfolio volatility."
+                "**Methodology**: Portfolio weights are fixed at optimal values. "
+                "We change each asset's parameter by ±1 percentage point (e.g., 10% → 11% or 10% → 9%), "
+                "then measure the impact on portfolio performance. "
+                "**Impact values are in percentage points** (e.g., 0.007 = 0.7 percentage points)."
             )
             
             fig = plot_sensitivity_analysis(
