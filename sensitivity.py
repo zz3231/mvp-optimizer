@@ -32,6 +32,7 @@ class SensitivityAnalyzer:
         # (these already account for risk-free if applicable)
         self.base_return = optimal_portfolio['expected_return']
         self.base_volatility = optimal_portfolio['volatility']
+        self.base_sharpe = optimal_portfolio['sharpe_ratio']
         
         # Check if risk-free is included
         self.weight_riskfree = optimal_portfolio.get('weight_riskfree', 0.0)
@@ -70,15 +71,23 @@ class SensitivityAnalyzer:
                 # Volatility doesn't change (only depends on vols and correlations)
                 portfolio_volatility = self.base_volatility
                 
-                # Calculate impact
+                # Calculate Sharpe Ratio with new return
+                if portfolio_volatility > 0:
+                    portfolio_sharpe = (portfolio_return - self.base_optimizer.risk_free_rate) / portfolio_volatility
+                else:
+                    portfolio_sharpe = 0.0
+                
+                # Calculate impacts
                 return_impact = portfolio_return - self.base_return
                 volatility_impact = 0.0  # No change in this case
+                sharpe_impact = portfolio_sharpe - self.base_sharpe
                 
                 results.append({
                     'asset': asset_name,
                     'direction': direction,
                     'return_impact': return_impact,
-                    'volatility_impact': volatility_impact
+                    'volatility_impact': volatility_impact,
+                    'sharpe_impact': sharpe_impact
                 })
         
         return pd.DataFrame(results)
@@ -121,15 +130,23 @@ class SensitivityAnalyzer:
                                            np.dot(true_cov, self.optimal_weights))
                 portfolio_volatility = np.sqrt(max(0, portfolio_variance))
                 
-                # Calculate impact
+                # Calculate Sharpe Ratio with new volatility
+                if portfolio_volatility > 0:
+                    portfolio_sharpe = (portfolio_return - self.base_optimizer.risk_free_rate) / portfolio_volatility
+                else:
+                    portfolio_sharpe = 0.0
+                
+                # Calculate impacts
                 return_impact = 0.0  # No change in this case
                 volatility_impact = portfolio_volatility - self.base_volatility
+                sharpe_impact = portfolio_sharpe - self.base_sharpe
                 
                 results.append({
                     'asset': asset_name,
                     'direction': direction,
                     'return_impact': return_impact,
-                    'volatility_impact': volatility_impact
+                    'volatility_impact': volatility_impact,
+                    'sharpe_impact': sharpe_impact
                 })
         
         return pd.DataFrame(results)

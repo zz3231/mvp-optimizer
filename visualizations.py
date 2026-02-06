@@ -143,13 +143,15 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
 
 def plot_sensitivity_analysis(df_return_sens, df_vol_sens):
     """
-    Create 2 plots for sensitivity analysis
+    Create 4 plots for sensitivity analysis (2x2 grid)
     
-    1. Expected return error -> Portfolio return impact
-    2. Volatility error -> Portfolio volatility impact
+    Left column: Expected Return Error impacts
+    1. Portfolio Return Impact
+    2. Portfolio Sharpe Ratio Impact
     
-    Note: Expected return error doesn't affect volatility, and 
-    volatility error doesn't affect expected return (with fixed weights).
+    Right column: Volatility Error impacts
+    3. Portfolio Volatility Impact
+    4. Portfolio Sharpe Ratio Impact
     
     Returns:
     --------
@@ -161,6 +163,8 @@ def plot_sensitivity_analysis(df_return_sens, df_vol_sens):
     # Prepare data for return sensitivity
     return_decrease_impact = []
     return_increase_impact = []
+    return_sharpe_decrease = []
+    return_sharpe_increase = []
     
     for asset in assets:
         return_data = df_return_sens[df_return_sens['asset'] == asset]
@@ -170,10 +174,18 @@ def plot_sensitivity_analysis(df_return_sens, df_vol_sens):
         return_increase_impact.append(
             return_data[return_data['direction'] == 'increase']['return_impact'].values[0]
         )
+        return_sharpe_decrease.append(
+            return_data[return_data['direction'] == 'decrease']['sharpe_impact'].values[0]
+        )
+        return_sharpe_increase.append(
+            return_data[return_data['direction'] == 'increase']['sharpe_impact'].values[0]
+        )
     
     # Prepare data for volatility sensitivity
     vol_decrease_impact = []
     vol_increase_impact = []
+    vol_sharpe_decrease = []
+    vol_sharpe_increase = []
     
     for asset in assets:
         vol_data = df_vol_sens[df_vol_sens['asset'] == asset]
@@ -183,47 +195,81 @@ def plot_sensitivity_analysis(df_return_sens, df_vol_sens):
         vol_increase_impact.append(
             vol_data[vol_data['direction'] == 'increase']['volatility_impact'].values[0]
         )
+        vol_sharpe_decrease.append(
+            vol_data[vol_data['direction'] == 'decrease']['sharpe_impact'].values[0]
+        )
+        vol_sharpe_increase.append(
+            vol_data[vol_data['direction'] == 'increase']['sharpe_impact'].values[0]
+        )
     
-    # Create figure with 2 subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    # Create figure with 2x2 subplots
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(18, 12))
     
     y_positions = np.arange(n_assets)
     bar_width = 0.35
     
-    # Plot 1: Expected Return Error → Portfolio Return Impact
+    # Plot 1 (Top-Left): Expected Return Error → Portfolio Return Impact
     ax1.barh(y_positions - bar_width/2, return_decrease_impact, bar_width, 
              label='Decrease 1 ppt', color='crimson', alpha=0.7)
     ax1.barh(y_positions + bar_width/2, return_increase_impact, bar_width,
              label='Increase 1 ppt', color='forestgreen', alpha=0.7)
     ax1.set_yticks(y_positions)
     ax1.set_yticklabels(assets)
-    ax1.set_xlabel('Portfolio Return Impact (percentage points)', fontsize=12, fontweight='bold')
-    ax1.set_title('Expected Return Error → Portfolio Return Impact', 
-                  fontsize=13, fontweight='bold')
+    ax1.set_xlabel('Portfolio Return Impact (ppt)', fontsize=11, fontweight='bold')
+    ax1.set_title('Expected Return Error → Return Impact', 
+                  fontsize=12, fontweight='bold')
     ax1.axvline(0, color='black', linewidth=0.8, linestyle='-')
-    ax1.legend(loc='best', fontsize=10)
+    ax1.legend(loc='best', fontsize=9)
     ax1.grid(axis='x', alpha=0.3)
-    # Format as percentage points
     ax1.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x*100:.2f}%'))
     
-    # Plot 2: Volatility Error → Portfolio Volatility Impact
+    # Plot 2 (Top-Right): Volatility Error → Portfolio Volatility Impact
     ax2.barh(y_positions - bar_width/2, vol_decrease_impact, bar_width,
              label='Decrease 1 ppt', color='crimson', alpha=0.7)
     ax2.barh(y_positions + bar_width/2, vol_increase_impact, bar_width,
              label='Increase 1 ppt', color='forestgreen', alpha=0.7)
     ax2.set_yticks(y_positions)
     ax2.set_yticklabels(assets)
-    ax2.set_xlabel('Portfolio Volatility Impact (percentage points)', fontsize=12, fontweight='bold')
-    ax2.set_title('Volatility Error → Portfolio Volatility Impact', 
-                  fontsize=13, fontweight='bold')
+    ax2.set_xlabel('Portfolio Volatility Impact (ppt)', fontsize=11, fontweight='bold')
+    ax2.set_title('Volatility Error → Volatility Impact', 
+                  fontsize=12, fontweight='bold')
     ax2.axvline(0, color='black', linewidth=0.8, linestyle='-')
-    ax2.legend(loc='best', fontsize=10)
+    ax2.legend(loc='best', fontsize=9)
     ax2.grid(axis='x', alpha=0.3)
-    # Format as percentage points
     ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x*100:.2f}%'))
     
-    plt.suptitle('Sensitivity Analysis: Cost of Wrong Parameter Estimates', 
-                 fontsize=16, fontweight='bold', y=0.98)
+    # Plot 3 (Bottom-Left): Expected Return Error → Sharpe Ratio Impact
+    ax3.barh(y_positions - bar_width/2, return_sharpe_decrease, bar_width,
+             label='Decrease 1 ppt', color='crimson', alpha=0.7)
+    ax3.barh(y_positions + bar_width/2, return_sharpe_increase, bar_width,
+             label='Increase 1 ppt', color='forestgreen', alpha=0.7)
+    ax3.set_yticks(y_positions)
+    ax3.set_yticklabels(assets)
+    ax3.set_xlabel('Portfolio Sharpe Ratio Impact', fontsize=11, fontweight='bold')
+    ax3.set_title('Expected Return Error → Sharpe Ratio Impact', 
+                  fontsize=12, fontweight='bold')
+    ax3.axvline(0, color='black', linewidth=0.8, linestyle='-')
+    ax3.legend(loc='best', fontsize=9)
+    ax3.grid(axis='x', alpha=0.3)
+    ax3.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.4f}'))
+    
+    # Plot 4 (Bottom-Right): Volatility Error → Sharpe Ratio Impact
+    ax4.barh(y_positions - bar_width/2, vol_sharpe_decrease, bar_width,
+             label='Decrease 1 ppt', color='crimson', alpha=0.7)
+    ax4.barh(y_positions + bar_width/2, vol_sharpe_increase, bar_width,
+             label='Increase 1 ppt', color='forestgreen', alpha=0.7)
+    ax4.set_yticks(y_positions)
+    ax4.set_yticklabels(assets)
+    ax4.set_xlabel('Portfolio Sharpe Ratio Impact', fontsize=11, fontweight='bold')
+    ax4.set_title('Volatility Error → Sharpe Ratio Impact', 
+                  fontsize=12, fontweight='bold')
+    ax4.axvline(0, color='black', linewidth=0.8, linestyle='-')
+    ax4.legend(loc='best', fontsize=9)
+    ax4.grid(axis='x', alpha=0.3)
+    ax4.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.4f}'))
+    
+    plt.suptitle('Sensitivity Analysis: Impact of Parameter Estimation Errors', 
+                 fontsize=16, fontweight='bold', y=0.995)
     plt.tight_layout()
     
     return fig
