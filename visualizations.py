@@ -104,21 +104,17 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
     
     # Calculate ranges based on portfolios and assets (NOT frontier)
     vol_max = max(all_vols)
-    ret_max = max(all_returns)
+    ret_min, ret_max = min(all_returns), max(all_returns)
+    ret_range = ret_max - ret_min
     
-    # Smart axis limits to center the data
-    # X-axis: From 0, extend just enough beyond max
-    x_max = vol_max * 1.08
+    # X-axis: From 0, extend 10% beyond max
+    ax.set_xlim(0, vol_max * 1.10)
     
-    # Y-axis: From 0, extend to make data centered vertically
-    # Calculate what y_max should be to center the data
-    # We want the data to occupy roughly 60-80% of the vertical space
-    # If ret_max is at 12%, and we want it at 70% of the plot height,
-    # then y_max should be approximately ret_max / 0.7
-    y_max = ret_max * 1.4  # Data will be at ~70% of plot height
+    # Y-axis: From 0 (or slightly below min if no risk-free), with margin above
+    y_min = 0  # Always start from 0%
+    y_max = ret_max + ret_range * 0.10  # Add 10% margin above max
     
-    ax.set_xlim(0, x_max)
-    ax.set_ylim(0, y_max)
+    ax.set_ylim(y_min, y_max)
     
     # Improved legend
     ax.legend(loc='best', fontsize=10, framealpha=0.95, 
