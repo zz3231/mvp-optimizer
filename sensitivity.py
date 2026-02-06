@@ -1,48 +1,46 @@
 """
 Sensitivity Analysis Module
-Analyze the cost of using wrong parameter estimates
+Analyze impact of parameter misestimation on portfolio performance
 """
 
 import numpy as np
 import pandas as pd
-from optimizer import MeanVarianceOptimizer
 
 
 class SensitivityAnalyzer:
     """
-    Analyze the cost of using wrong parameter estimates
+    Sensitivity Analysis: Use FIXED optimal weights, vary parameters
     
-    Key concept: Optimize using 'wrong' inputs, then evaluate portfolio
-    performance under 'true' market conditions to quantify the cost of error.
+    Key concept: What happens to my portfolio if market parameters 
+    differ from my estimates, but I'm stuck with weights optimized 
+    using the wrong estimates?
     """
     
-    def __init__(self, base_optimizer, base_optimal_weights):
+    def __init__(self, base_optimizer, optimal_weights):
         """
         Parameters:
         -----------
         base_optimizer : MeanVarianceOptimizer
-            Optimizer with 'true' parameters
-        base_optimal_weights : array
-            Optimal weights based on 'true' parameters
+            Optimizer with user's estimated parameters
+        optimal_weights : array
+            Optimal portfolio weights (these stay FIXED)
         """
         self.base_optimizer = base_optimizer
-        self.base_weights = base_optimal_weights
+        self.optimal_weights = optimal_weights
         
-        # Calculate base portfolio metrics using TRUE parameters
-        self.base_return = base_optimizer.portfolio_return(base_optimal_weights)
-        self.base_volatility = base_optimizer.portfolio_volatility(base_optimal_weights)
-        self.base_sharpe = base_optimizer.portfolio_sharpe_ratio(base_optimal_weights)
+        # Base portfolio metrics using user's estimated parameters
+        self.base_return = base_optimizer.portfolio_return(optimal_weights)
+        self.base_volatility = base_optimizer.portfolio_volatility(optimal_weights)
     
-    def analyze_return_sensitivity(self, percentage_change=0.01, risk_aversion=3.0, 
-                                   constraints=None, use_riskless=True):
+    def analyze_return_sensitivity(self, percentage_change=0.01):
         """
-        Analyze impact of wrong expected return estimates
+        Analyze impact if true expected returns differ from estimates
         
-        For each asset:
-        1. Change its expected return by +/- percentage_change
-        2. Optimize portfolio using this wrong input
-        3. Evaluate this portfolio using true parameters
-        4. Calculate the impact (difference in metrics)
+        Logic:
+        1. Use FIXED optimal weights (don't re-optimize!)
+        2. Change true market return by +/- percentage_change
+        3. Calculate portfolio performance with these changed returns
+        4. Compare to base case
         """
         results = []
         
@@ -50,45 +48,20 @@ class SensitivityAnalyzer:
             asset_name = self.base_optimizer.asset_names[asset_idx]
             
             for direction, multiplier in [('decrease', -1), ('increase', 1)]:
-                # Create wrong input
-                wrong_returns = self.base_optimizer.expected_returns.copy()
-                wrong_returns[asset_idx] += multiplier * percentage_change
+                # Market reality: returns differ from estimates
+                true_returns = self.base_optimizer.expected_returns.copy()
+                true_returns[asset_idx] += multiplier * percentage_change
                 
-                # Optimize using wrong input
-                wrong_optimizer = MeanVarianceOptimizer(
-                    asset_names=self.base_optimizer.asset_names,
-                    expected_returns=wrong_returns,
-                    volatilities=self.base_optimizer.volatilities,
-                    correlation_matrix=self.base_optimizer.correlation_matrix,
-                    risk_free_rate=self.base_optimizer.risk_free_rate
-                )
+                # Calculate portfolio performance with FIXED weights
+                # but different market returns
+                portfolio_return = np.dot(self.optimal_weights, true_returns)
                 
-                # Get optimal portfolio using wrong parameters
-                if use_riskless:
-                    tangency = wrong_optimizer.find_tangency_portfolio(constraints)
-                    if tangency:
-                        wrong_optimal = wrong_optimizer.find_optimal_portfolio_with_riskfree(
-                            tangency, risk_aversion
-                        )
-                    else:
-                        continue
-                else:
-                    wrong_optimal = wrong_optimizer.find_optimal_portfolio_without_riskfree(
-                        risk_aversion, constraints
-                    )
+                # Volatility doesn't change (only depends on vols and correlations)
+                portfolio_volatility = self.base_volatility
                 
-                if wrong_optimal is None:
-                    continue
-                
-                wrong_weights = wrong_optimal['weights']
-                
-                # Evaluate using TRUE parameters
-                true_return = self.base_optimizer.portfolio_return(wrong_weights)
-                true_volatility = self.base_optimizer.portfolio_volatility(wrong_weights)
-                
-                # Calculate impact (difference from base optimal)
-                return_impact = true_return - self.base_return
-                volatility_impact = true_volatility - self.base_volatility
+                # Calculate impact
+                return_impact = portfolio_return - self.base_return
+                volatility_impact = 0.0  # No change in this case
                 
                 results.append({
                     'asset': asset_name,
@@ -99,10 +72,16 @@ class SensitivityAnalyzer:
         
         return pd.DataFrame(results)
     
-    def analyze_volatility_sensitivity(self, percentage_change=0.01, risk_aversion=3.0,
-                                      constraints=None, use_riskless=True):
+    def analyze_volatility_sensitivity(self, percentage_change=0.01):
         """
-        Analyze impact of wrong volatility estimates
+        Analyze impact if true volatilities differ from estimates
+        
+        Logic:
+        1. Use FIXED optimal weights
+        2. Change true market volatility by +/- percentage_change
+        3. Recalculate covariance matrix with new volatility
+        4. Calculate portfolio volatility with fixed weights
+        5. Compare to base case
         """
         results = []
         
@@ -110,40 +89,30 @@ class SensitivityAnalyzer:
             asset_name = self.base_optimizer.asset_names[asset_idx]
             
             for direction, multiplier in [('decrease', -1), ('increase', 1)]:
-                wrong_vols = self.base_optimizer.volatilities.copy()
-                wrong_vols[asset_idx] += multiplier * percentage_change
+                # Market reality: volatilities differ from estimates
+                true_vols = self.base_optimizer.volatilities.copy()
+                true_vols[asset_idx] += multiplier * percentage_change
                 
-                wrong_optimizer = MeanVarianceOptimizer(
-                    asset_names=self.base_optimizer.asset_names,
-                    expected_returns=self.base_optimizer.expected_returns,
-                    volatilities=wrong_vols,
-                    correlation_matrix=self.base_optimizer.correlation_matrix,
-                    risk_free_rate=self.base_optimizer.risk_free_rate
-                )
+                # Recalculate covariance matrix with new volatility
+                true_cov = np.zeros((self.base_optimizer.n_assets, 
+                                    self.base_optimizer.n_assets))
+                for i in range(self.base_optimizer.n_assets):
+                    for j in range(self.base_optimizer.n_assets):
+                        true_cov[i, j] = (self.base_optimizer.correlation_matrix[i, j] * 
+                                         true_vols[i] * true_vols[j])
                 
-                if use_riskless:
-                    tangency = wrong_optimizer.find_tangency_portfolio(constraints)
-                    if tangency:
-                        wrong_optimal = wrong_optimizer.find_optimal_portfolio_with_riskfree(
-                            tangency, risk_aversion
-                        )
-                    else:
-                        continue
-                else:
-                    wrong_optimal = wrong_optimizer.find_optimal_portfolio_without_riskfree(
-                        risk_aversion, constraints
-                    )
+                # Calculate portfolio performance with FIXED weights
+                # Expected return doesn't change (only depends on returns)
+                portfolio_return = self.base_return
                 
-                if wrong_optimal is None:
-                    continue
+                # Volatility DOES change
+                portfolio_variance = np.dot(self.optimal_weights, 
+                                           np.dot(true_cov, self.optimal_weights))
+                portfolio_volatility = np.sqrt(max(0, portfolio_variance))
                 
-                wrong_weights = wrong_optimal['weights']
-                
-                true_return = self.base_optimizer.portfolio_return(wrong_weights)
-                true_volatility = self.base_optimizer.portfolio_volatility(wrong_weights)
-                
-                return_impact = true_return - self.base_return
-                volatility_impact = true_volatility - self.base_volatility
+                # Calculate impact
+                return_impact = 0.0  # No change in this case
+                volatility_impact = portfolio_volatility - self.base_volatility
                 
                 results.append({
                     'asset': asset_name,

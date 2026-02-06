@@ -189,8 +189,11 @@ with tab1:
     # Correlation Matrix
     st.subheader("3. Correlation Matrix")
     
-    # Initialize correlation matrix in session state if not exists
-    if 'corr_matrix_values' not in st.session_state or len(st.session_state.corr_matrix_values) != n_assets:
+    st.markdown("*Edit upper triangle only - lower triangle mirrors automatically*")
+    
+    # Initialize correlation matrix in session state
+    corr_key = f'corr_matrix_{n_assets}'
+    if corr_key not in st.session_state:
         default_corr = np.eye(n_assets)
         if n_assets == 3:
             default_corr = np.array([
@@ -203,52 +206,62 @@ with tab1:
             for i in range(n_assets):
                 for j in range(i+1, n_assets):
                     default_corr[i, j] = default_corr[j, i] = 0.3
-        st.session_state.corr_matrix_values = default_corr
+        st.session_state[corr_key] = default_corr.tolist()
     
-    # Display correlation matrix input
-    corr_matrix = np.copy(st.session_state.corr_matrix_values)
+    # Build correlation matrix
+    correlation_matrix = []
     
     for i in range(n_assets):
+        row = []
         cols = st.columns(n_assets)
         for j in range(n_assets):
             with cols[j]:
                 if i == j:
-                    # Diagonal elements are always 1
-                    st.text_input(
-                        f"corr_{i}_{j}",
-                        value="1.00",
+                    # Diagonal is always 1
+                    st.number_input(
+                        f"{asset_names[i] if i < len(asset_names) else f'Asset {i+1}'} × "
+                        f"{asset_names[j] if j < len(asset_names) else f'Asset {j+1}'}",
+                        value=1.0,
                         disabled=True,
-                        key=f"corr_{i}_{j}",
+                        key=f"corr_diag_{i}_{j}",
                         label_visibility="collapsed"
                     )
+                    row.append(1.0)
                 elif i < j:
                     # Upper triangle - editable
+                    default_val = st.session_state[corr_key][i][j] if i < len(st.session_state[corr_key]) and j < len(st.session_state[corr_key][i]) else 0.3
                     val = st.number_input(
-                        f"corr_{i}_{j}",
-                        min_value=-1.0,
-                        max_value=1.0,
-                        value=float(corr_matrix[i, j]),
+                        f"{asset_names[i] if i < len(asset_names) else f'Asset {i+1}'} × "
+                        f"{asset_names[j] if j < len(asset_names) else f'Asset {j+1}'}",
+                        min_value=-0.99,
+                        max_value=0.99,
+                        value=float(default_val),
                         step=0.01,
-                        key=f"corr_{i}_{j}",
+                        format="%.2f",
+                        key=f"corr_upper_{i}_{j}",
                         label_visibility="collapsed"
                     )
-                    corr_matrix[i, j] = val
-                    corr_matrix[j, i] = val  # Mirror to lower triangle
+                    row.append(val)
+                    # Update session state
+                    if i < len(st.session_state[corr_key]) and j < len(st.session_state[corr_key][i]):
+                        st.session_state[corr_key][i][j] = val
+                        st.session_state[corr_key][j][i] = val
                 else:
-                    # Lower triangle - display only (mirrored from upper)
-                    st.text_input(
-                        f"corr_{i}_{j}",
-                        value=f"{corr_matrix[i, j]:.2f}",
+                    # Lower triangle - mirror from upper
+                    mirror_val = st.session_state[corr_key][j][i] if j < len(st.session_state[corr_key]) and i < len(st.session_state[corr_key][j]) else 0.3
+                    st.number_input(
+                        f"{asset_names[i] if i < len(asset_names) else f'Asset {i+1}'} × "
+                        f"{asset_names[j] if j < len(asset_names) else f'Asset {j+1}'}",
+                        value=float(mirror_val),
                         disabled=True,
-                        key=f"corr_{i}_{j}_mirror",
-                        label_visibility="collapsed"
+                        key=f"corr_lower_{i}_{j}",
+                        label_visibility="collapsed",
+                        format="%.2f"
                     )
+                    row.append(mirror_val)
+        correlation_matrix.append(row)
     
-    # Update session state
-    st.session_state.corr_matrix_values = corr_matrix
-    
-    # Convert to numpy array
-    correlation_matrix = corr_matrix
+    correlation_matrix = np.array(correlation_matrix)
     
     st.markdown("---")
     
@@ -336,43 +349,74 @@ with tab1:
         st.markdown("---")
         st.header("Results")
         
-        # Display portfolios
-        col1, col2, col3 = st.columns(3)
-        
+        # Display portfolios based on riskless configuration
         portfolios = st.session_state.portfolios
         
-        with col1:
-            st.subheader("Tangency Portfolio")
-            if portfolios['tangency']:
-                result = format_portfolio_results(portfolios['tangency'], "Tangency")
-                st.dataframe(result['weights_df'], hide_index=True)
-                for key, value in result['metrics'].items():
-                    st.metric(key, value)
-            else:
-                st.warning("Tangency portfolio not found")
-        
-        with col2:
-            st.subheader("Optimal Portfolio")
-            if portfolios['optimal']:
-                result = format_portfolio_results(portfolios['optimal'], "Optimal")
-                st.dataframe(result['weights_df'], hide_index=True)
-                for key, value in result['metrics'].items():
-                    st.metric(key, value)
-                if result['additional_info']:
-                    for key, value in result['additional_info'].items():
+        if st.session_state.use_riskless:
+            # With riskless: Show Tangency, Optimal, GMV
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.subheader("Tangency Portfolio")
+                if portfolios['tangency']:
+                    result = format_portfolio_results(portfolios['tangency'], "Tangency")
+                    st.dataframe(result['weights_df'], hide_index=True)
+                    for key, value in result['metrics'].items():
                         st.metric(key, value)
-            else:
-                st.warning("Optimal portfolio not found")
+                else:
+                    st.warning("Tangency portfolio not found")
+            
+            with col2:
+                st.subheader("Optimal Portfolio")
+                st.markdown("*Combination of Tangency + Risk-Free*")
+                if portfolios['optimal']:
+                    result = format_portfolio_results(portfolios['optimal'], "Optimal")
+                    st.dataframe(result['weights_df'], hide_index=True)
+                    for key, value in result['metrics'].items():
+                        st.metric(key, value)
+                    if result['additional_info']:
+                        for key, value in result['additional_info'].items():
+                            st.metric(key, value)
+                else:
+                    st.warning("Optimal portfolio not found")
+            
+            with col3:
+                st.subheader("GMV Portfolio")
+                if portfolios['gmv']:
+                    result = format_portfolio_results(portfolios['gmv'], "GMV")
+                    st.dataframe(result['weights_df'], hide_index=True)
+                    for key, value in result['metrics'].items():
+                        st.metric(key, value)
+                else:
+                    st.warning("GMV portfolio not found")
         
-        with col3:
-            st.subheader("GMV Portfolio")
-            if portfolios['gmv']:
-                result = format_portfolio_results(portfolios['gmv'], "GMV")
-                st.dataframe(result['weights_df'], hide_index=True)
-                for key, value in result['metrics'].items():
-                    st.metric(key, value)
-            else:
-                st.warning("GMV portfolio not found")
+        else:
+            # Without riskless: Only show Optimal and GMV
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Optimal Portfolio")
+                st.markdown("*Maximizes Utility Function*")
+                if portfolios['optimal']:
+                    result = format_portfolio_results(portfolios['optimal'], "Optimal")
+                    st.dataframe(result['weights_df'], hide_index=True)
+                    for key, value in result['metrics'].items():
+                        st.metric(key, value)
+                    if result['additional_info']:
+                        for key, value in result['additional_info'].items():
+                            st.metric(key, value)
+                else:
+                    st.warning("Optimal portfolio not found")
+            
+            with col2:
+                st.subheader("GMV Portfolio")
+                if portfolios['gmv']:
+                    result = format_portfolio_results(portfolios['gmv'], "GMV")
+                    st.dataframe(result['weights_df'], hide_index=True)
+                    for key, value in result['metrics'].items():
+                        st.metric(key, value)
+                else:
+                    st.warning("GMV portfolio not found")
         
         # Plot efficient frontier
         st.markdown("---")
@@ -403,30 +447,23 @@ with tab2:
                 try:
                     sensitivity = SensitivityAnalyzer(
                         base_optimizer=st.session_state.optimizer,
-                        base_optimal_weights=st.session_state.optimal['weights']
+                        optimal_weights=st.session_state.optimal['weights']
                     )
                     
                     # Analyze
                     df_return_sens = sensitivity.analyze_return_sensitivity(
-                        percentage_change=0.01,
-                        risk_aversion=st.session_state.risk_aversion,
-                        constraints=st.session_state.constraints,
-                        use_riskless=st.session_state.use_riskless
+                        percentage_change=0.01
                     )
                     
                     df_vol_sens = sensitivity.analyze_volatility_sensitivity(
-                        percentage_change=0.01,
-                        risk_aversion=st.session_state.risk_aversion,
-                        constraints=st.session_state.constraints,
-                        use_riskless=st.session_state.use_riskless
+                        percentage_change=0.01
                     )
                     
                     st.session_state.df_return_sens = df_return_sens
                     st.session_state.df_vol_sens = df_vol_sens
                     st.session_state.sensitivity_base = {
                         'return': sensitivity.base_return,
-                        'volatility': sensitivity.base_volatility,
-                        'sharpe': sensitivity.base_sharpe
+                        'volatility': sensitivity.base_volatility
                     }
                     
                     st.success("Sensitivity analysis completed!")
@@ -439,24 +476,22 @@ with tab2:
             st.markdown("---")
             
             # Base metrics
-            st.subheader("Base Optimal Portfolio Metrics")
-            col1, col2, col3 = st.columns(3)
+            st.subheader("Optimal Portfolio Metrics (Fixed Weights)")
+            col1, col2 = st.columns(2)
             base = st.session_state.sensitivity_base
             with col1:
                 st.metric("Expected Return", f"{base['return']:.2%}")
             with col2:
                 st.metric("Volatility", f"{base['volatility']:.2%}")
-            with col3:
-                st.metric("Sharpe Ratio", f"{base['sharpe']:.4f}")
             
             st.markdown("---")
             
             # Plots
-            st.subheader("Impact of Parameter Errors")
+            st.subheader("Impact of Parameter Errors on Fixed Portfolio")
             st.markdown(
-                "**Interpretation**: Negative values indicate worse performance "
-                "compared to the optimal portfolio. The larger the absolute value, "
-                "the higher the cost of parameter misestimation."
+                "**Key insight**: These charts show what happens to your portfolio's "
+                "performance if market parameters differ from your estimates, **but you're "
+                "stuck with weights optimized using the wrong estimates**."
             )
             
             fig = plot_sensitivity_analysis(
