@@ -445,8 +445,8 @@ with tab1:
                         for key, value in result['additional_info'].items():
                             st.metric(key, value)
                     # Show implied risk aversion if using risk-free asset
-                    if use_riskless and 'weight_tangency' in portfolios['optimal']:
-                        implied_a = calculate_implied_risk_aversion(portfolios['optimal'], tangency, risk_free_rate)
+                    if st.session_state.use_riskless and 'weight_tangency' in portfolios['optimal'] and portfolios.get('tangency'):
+                        implied_a = calculate_implied_risk_aversion(portfolios['optimal'], portfolios['tangency'], risk_free_rate)
                         if implied_a:
                             st.metric("Implied Risk Aversion", f"{implied_a:.2f}")
                 else:
