@@ -350,7 +350,6 @@ with tab1:
                     st.session_state.constraints = constraints
                     st.session_state.use_riskless = use_riskless
                     st.session_state.risk_aversion = risk_aversion
-                    st.session_state.limited_borrowing = limited_borrowing
                     st.session_state.use_target_return = use_target_return
                     st.session_state.target_return = target_return
                     
