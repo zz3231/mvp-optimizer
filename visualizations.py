@@ -75,7 +75,7 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
     ax.set_ylabel('Expected Return', fontsize=13, fontweight='bold')
     ax.set_title('Mean-Variance Efficient Frontier', fontsize=15, fontweight='bold', pad=20)
     
-    # Set smart axis limits based on data
+    # Set smart axis limits
     # Collect all relevant points
     all_vols = list(optimizer.volatilities) + list(frontier['volatilities'])
     all_returns = list(optimizer.expected_returns) + list(frontier['returns'])
@@ -90,19 +90,21 @@ def plot_efficient_frontier(optimizer, frontier, portfolios, use_riskless=True):
         all_vols.append(portfolios['gmv']['volatility'])
         all_returns.append(portfolios['gmv']['expected_return'])
     
-    # Calculate ranges with small margin
-    vol_min, vol_max = min(all_vols), max(all_vols)
-    ret_min, ret_max = min(all_returns), max(all_returns)
+    # Always include risk-free asset if used
+    if use_riskless:
+        all_vols.append(0.0)
+        all_returns.append(optimizer.risk_free_rate)
     
-    vol_range = vol_max - vol_min
+    # Calculate ranges
+    vol_max = max(all_vols)
+    ret_min, ret_max = min(all_returns), max(all_returns)
     ret_range = ret_max - ret_min
     
-    # Add 10% margin on each side
-    margin = 0.1
-    ax.set_xlim(max(0, vol_min - vol_range * margin), 
-                vol_max + vol_range * margin)
-    ax.set_ylim(ret_min - ret_range * margin, 
-                ret_max + ret_range * margin)
+    # X-axis: Always start from 0 (to show risk-free), extend 15% beyond max
+    ax.set_xlim(0, vol_max * 1.15)
+    
+    # Y-axis: Add 10% margin on both sides
+    ax.set_ylim(ret_min - ret_range * 0.1, ret_max + ret_range * 0.1)
     
     # Improved legend
     ax.legend(loc='best', fontsize=10, framealpha=0.95, 
