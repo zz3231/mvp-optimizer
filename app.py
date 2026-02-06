@@ -247,14 +247,14 @@ with tab1:
                         label_visibility="collapsed"
                     )
                 elif i < j:
-                    # Upper triangle - editable
+                    # Upper triangle - editable (4 decimal places)
                     st.number_input(
                         f"corr_{i}_{j}",
                         min_value=-0.99,
                         max_value=0.99,
                         value=float(st.session_state[corr_key][i, j]),
-                        step=0.01,
-                        format="%.2f",
+                        step=0.0001,
+                        format="%.4f",
                         key=f"corr_input_{i}_{j}",
                         label_visibility="collapsed"
                     )
